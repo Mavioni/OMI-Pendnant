@@ -94,7 +94,8 @@ function Hero() {
 /* ============== MARQUEE ============== */
 function Marquee() {
   const items = ["SEE", "·", "UNDERSTAND", "·", "EMPOWER", "·", "5500FP", "·", "24-TRIT RISC", "·", "SOLID-STATE", "·", "16.6 GRAMS"];
-  const repeated = [...items, ...items, ...items];
+  // Two copies: CSS translateX(-50%) moves exactly one full copy → seamless loop
+  const repeated = [...items, ...items];
   return (
     <div className="marquee">
       <div className="marquee__track">
@@ -224,7 +225,7 @@ function TritStream() {
   useEffect(() => {
     const id = setInterval(() => {
       setCells(prev => prev.map(v => Math.random() < 0.35 ? Math.floor(Math.random() * 3) - 1 : v));
-    }, 220);
+    }, 300); // 300ms > 250ms CSS transition so each cell finishes before next update
     return () => clearInterval(id);
   }, []);
   const labels = { '-1': '−', '0': '0', '1': '+' };
@@ -657,15 +658,9 @@ function Battery() {
   const [pct, setPct] = useState(0);
   const ref = useRef(null);
   useEffect(() => {
+    // Single setState drives CSS transition — no stacking intervals, no unmount leak
     const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) {
-        let p = 0;
-        const id = setInterval(() => {
-          p += 2;
-          setPct(p);
-          if (p >= 100) clearInterval(id);
-        }, 60);
-      }
+      if (e.isIntersecting) setPct(100);
     }, { threshold: 0.4 });
     if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
