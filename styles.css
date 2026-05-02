@@ -710,33 +710,41 @@ a { color: inherit; text-decoration: none; }
 .x { color: var(--ink-4); }
 
 /* ------- EXPLODED VIEW ------- */
-.exploded-section { padding: 0; height: 420vh; position: relative; }
+.exploded-section { padding: 0; height: 500vh; position: relative; }
 .exploded-sticky {
   position: sticky; top: 0;
   height: 100vh;
-  display: flex;
-  align-items: center;
   background: var(--bg);
   overflow: hidden;
-  padding-top: 64px; /* clear nav */
+  /*
+    Stage is 60vh tall. Center it vertically accounting for the 64px fixed nav:
+    padding-top = 64px + (available_height - stage_height) / 2
+                = 64px + (100vh - 64px - 60vh) / 2
+                = 32px + 20vh
+  */
+  padding-top: calc(32px + 20vh);
+  box-sizing: border-box;
 }
 .exploded-grid {
   display: grid;
-  grid-template-columns: 1fr 1.2fr 1fr;
-  gap: 48px;
+  grid-template-columns: 1fr 1fr 1fr;
+  /* Force all tracks to the same height as the stage so flex centering lands at ~50% */
+  grid-template-rows: 60vh;
+  gap: 40px;
   width: 100%;
   align-items: center;
   position: relative;
   z-index: 2;
 }
 @media (max-width: 1100px) { .exploded-grid { grid-template-columns: 1fr 1fr; } .exploded-grid .right { display: none; } }
-@media (max-width: 720px) { .exploded-grid { grid-template-columns: 1fr; } .exploded-grid .left { display: none; } }
+@media (max-width: 720px)  { .exploded-grid { grid-template-columns: 1fr; grid-template-rows: 55vh; } .exploded-grid .left { display: none; } }
 
 .exploded-stage {
-  height: 90vh;
+  height: 60vh;
+  min-height: 360px;
   position: relative;
-  perspective: 1800px;
-  perspective-origin: 50% 50%;
+  perspective: 1400px;
+  perspective-origin: 50% 48%;
 }
 .exploded-scene {
   position: absolute;
@@ -747,101 +755,75 @@ a { color: inherit; text-decoration: none; }
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 280px;
-  height: 520px;
+  width: 200px;
+  height: 370px;
   transform-style: preserve-3d;
-  transition: transform 800ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms;
-  filter: drop-shadow(0 30px 40px rgba(0,0,0,0.5));
+  /* direct-follow for scroll, slow-fade for opacity reveal */
+  transition: transform 80ms linear, opacity 600ms ease, filter 400ms;
+  filter: drop-shadow(0 18px 28px rgba(0,0,0,0.62));
 }
 .exp-slice .layer-svg {
   width: 100%;
   height: 100%;
   display: block;
 }
-.exp-slice.is-accent .layer-svg {
-  filter: drop-shadow(0 0 20px rgba(255,138,61,0.25));
-}
-.exp-slice__tag {
-  position: absolute;
-  top: 50%;
-  left: calc(100% + 32px);
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-family: var(--mono);
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 400ms 200ms;
-  pointer-events: none;
-}
-.exp-slice.is-active .exp-slice__tag { opacity: 1; }
-.exp-slice__num {
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  color: var(--amber);
-}
-.exp-slice__name {
-  font-family: var(--display);
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: var(--ink);
-  text-transform: none;
-}
-.exp-slice__sub {
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  color: var(--ink-3);
-  text-transform: uppercase;
-}
-.exp-slice__leader {
-  position: absolute;
-  top: 50%;
-  left: 100%;
-  width: 24px;
-  height: 1px;
-  background: var(--line);
-  opacity: 0;
-  transition: opacity 400ms;
-}
-.exp-slice.is-active .exp-slice__leader { opacity: 1; }
+.exp-slice.is-accent { filter: drop-shadow(0 18px 28px rgba(0,0,0,0.62)) drop-shadow(0 0 16px rgba(255,138,61,0.20)); }
 
 @media (max-width: 720px) {
-  .exp-slice { width: 220px; height: 410px; }
-  .exp-slice__tag { display: none; }
+  .exp-slice { width: 160px; height: 296px; }
 }
-  letter-spacing: -0.01em;
-  color: var(--ink);
+
+/* Left column heading — smaller to keep the column ≤ stage height */
+.exploded-h2 {
+  font-family: var(--display);
+  font-size: clamp(24px, 3.2vw, 46px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin: 0 0 20px;
+}
+/* Columns explicitly fill the grid row height so all items center at 50% */
+.exploded-grid .left {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+}
+.exp-stats {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
 }
 
 .exp-step {
-  padding: 28px 0;
+  padding: 16px 0;
   border-top: 1px solid var(--line);
-  opacity: 0.25;
+  opacity: 0.22;
   transition: opacity 300ms;
 }
 .exp-step.active { opacity: 1; }
 .exp-step .num {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.18em;
   color: var(--amber);
 }
 .exp-step h4 {
   font-family: var(--display);
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 600;
-  letter-spacing: -0.025em;
-  margin: 8px 0 12px;
+  letter-spacing: -0.02em;
+  margin: 6px 0 8px;
 }
 .exp-step p {
   color: var(--ink-2);
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
-.exp-stats { display: flex; flex-direction: column; gap: 24px; }
 .exp-stat {
   padding: 20px;
   background: var(--bg-1);

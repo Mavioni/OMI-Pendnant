@@ -252,156 +252,298 @@ function TritStream() {
 
 /* ============== EXPLODED VIEW (scroll-driven) ============== */
 
-/* Each "slice" is an isometric SVG render of one layer of the device.
-   Coordinate convention: 320 wide × 600 tall, rounded-rect outline matching the capsule. */
+/*
+  All four layers share the same coordinate origin (320 × 600 viewBox).
+  Anatomical constants keep parts pixel-perfect aligned when layers are stacked.
+*/
+const LAYER = {
+  W: 320, H: 600, R: 140,           // device outline
+  WALL: 16,                          // shell wall inset
+  CX: 160, CY: 300,                  // centroid
+  LENS_X: 160, LENS_Y: 155,         // camera lens center
+  MIC_Y: 300,                        // microphone array row
+  MICS: [116, 160, 204],             // three mic X positions
+  LED_X: 68, LED_Y: 155,            // status LED
+  LANYARD_Y: 40,                     // lanyard hole
+  CHARGE_Y: 510,                     // magnetic charging ring
+};
+const { W, H, R: LR } = LAYER;
+const mkOutline = (r, inset = 0) => {
+  const ri = r - inset, x0 = inset, x1 = W - inset, y0 = inset, y1 = H - inset;
+  return `M ${r},${y0} L ${x1 - r + inset},${y0} A ${ri},${ri} 0 0 1 ${x1},${r} L ${x1},${y1 - r + inset} A ${ri},${ri} 0 0 1 ${x1 - r + inset},${y1} L ${r},${y1} A ${ri},${ri} 0 0 1 ${x0},${y1 - r + inset} L ${x0},${r} A ${ri},${ri} 0 0 1 ${r},${y0} Z`;
+};
+const OUTLINE  = mkOutline(LR);
+const CAVITY   = mkOutline(LR - LAYER.WALL, LAYER.WALL);
+const VB = `-20 -20 ${W + 40} ${H + 40}`;
+
 function DeviceLayer({ kind }) {
-  const W = 320, H = 600, R = 150;
-  const outline = `M ${R},0 L ${W - R},0 A ${R} ${R} 0 0 1 ${W} ${R} L ${W} ${H - R} A ${R} ${R} 0 0 1 ${W - R} ${H} L ${R} ${H} A ${R} ${R} 0 0 1 0 ${H - R} L 0 ${R} A ${R} ${R} 0 0 1 ${R} 0 Z`;
 
   if (kind === 'shell') {
+    const { LENS_X, LENS_Y, MICS, MIC_Y, LED_X, LED_Y, LANYARD_Y, CHARGE_Y } = LAYER;
     return (
-      <svg viewBox={`-20 -20 ${W + 40} ${H + 40}`} className="layer-svg">
+      <svg viewBox={VB} className="layer-svg">
         <defs>
-          <linearGradient id="shellG" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#3a3a3f" />
-            <stop offset="40%" stopColor="#1a1a1d" />
-            <stop offset="100%" stopColor="#0a0a0c" />
+          <linearGradient id="sG" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#38383e" />
+            <stop offset="50%" stopColor="#1c1c20" />
+            <stop offset="100%" stopColor="#0d0d10" />
+          </linearGradient>
+          <linearGradient id="sEdge" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.22)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
           </linearGradient>
         </defs>
-        {/* outer shell */}
-        <path d={outline} fill="url(#shellG)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
-        {/* inner cavity (hollow) */}
-        <path d={`M ${R - 18},18 L ${W - R + 18},18 A ${R - 18} ${R - 18} 0 0 1 ${W - 18} ${R} L ${W - 18} ${H - R} A ${R - 18} ${R - 18} 0 0 1 ${W - R + 18} ${H - 18} L ${R - 18} ${H - 18} A ${R - 18} ${R - 18} 0 0 1 18 ${H - R} L 18 ${R} A ${R - 18} ${R - 18} 0 0 1 ${R - 18} 18 Z`}
-              fill="#050505" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+        {/* body */}
+        <path d={OUTLINE} fill="url(#sG)" stroke="rgba(255,255,255,0.13)" strokeWidth="1.5" />
+        {/* inner cavity */}
+        <path d={CAVITY} fill="#060608" stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
+        {/* surface brushing — fine horizontal lines */}
+        {Array.from({ length: 20 }).map((_, i) => (
+          <line key={i} x1={LAYER.WALL + 4} y1={90 + i * 22} x2={W - LAYER.WALL - 4} y2={90 + i * 22}
+                stroke="rgba(255,255,255,0.022)" strokeWidth="0.6" />
+        ))}
+        {/* top highlight arc */}
+        <path d={`M ${LR},0 L ${W - LR},0 A ${LR},${LR} 0 0 1 ${W},${LR}`}
+              fill="none" stroke="url(#sEdge)" strokeWidth="1" />
+        {/* equatorial parting seam */}
+        <line x1={LAYER.WALL} y1={LAYER.CY} x2={W - LAYER.WALL} y2={LAYER.CY}
+              stroke="rgba(255,255,255,0.06)" strokeWidth="0.6" />
         {/* lanyard hole */}
-        <circle cx={W / 2} cy={36} r="14" fill="#050505" stroke="rgba(255,255,255,0.1)" />
-        {/* equatorial seam */}
-        <line x1="0" y1={H / 2} x2={W} y2={H / 2} stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+        <circle cx={LENS_X} cy={LANYARD_Y} r="16" fill="#030305" stroke="rgba(255,255,255,0.14)" strokeWidth="1.2" />
+        <circle cx={LENS_X} cy={LANYARD_Y} r="9"  fill="none"    stroke="rgba(255,255,255,0.07)" strokeWidth="0.8" />
+        {/* camera aperture — matches optics lens exactly */}
+        <circle cx={LENS_X} cy={LENS_Y} r="52" fill="#030305" stroke="rgba(255,255,255,0.10)" strokeWidth="1.2" />
+        <circle cx={LENS_X} cy={LENS_Y} r="43" fill="#000"    stroke="rgba(255,255,255,0.05)" strokeWidth="0.6" />
+        <circle cx={LENS_X} cy={LENS_Y} r="30" fill="#020204" />
+        {/* mic ports — align with MICS array */}
+        {MICS.map((mx, i) => (
+          <React.Fragment key={i}>
+            <circle cx={mx} cy={MIC_Y} r="7"   fill="#000" stroke="rgba(255,255,255,0.10)" strokeWidth="1" />
+            <circle cx={mx} cy={MIC_Y} r="3.5" fill="#040404" />
+          </React.Fragment>
+        ))}
+        {/* LED port — matches optics LED */}
+        <circle cx={LED_X} cy={LED_Y} r="4" fill="#000" stroke="rgba(255,255,255,0.09)" strokeWidth="0.8" />
+        {/* magnetic charging ring */}
+        <circle cx={LENS_X} cy={CHARGE_Y} r="34" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.8" strokeDasharray="5 3" />
+        <circle cx={LENS_X} cy={CHARGE_Y} r="22" fill="#040406" stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
       </svg>
     );
   }
 
   if (kind === 'optics') {
+    const { LENS_X, LENS_Y, MICS, MIC_Y, LED_X, LED_Y, LANYARD_Y } = LAYER;
     return (
-      <svg viewBox={`-20 -20 ${W + 40} ${H + 40}`} className="layer-svg">
+      <svg viewBox={VB} className="layer-svg">
         <defs>
-          <radialGradient id="lensG" cx="0.35" cy="0.35">
-            <stop offset="0%" stopColor="#5b3a1a" />
-            <stop offset="40%" stopColor="#1a0e06" />
-            <stop offset="100%" stopColor="#000" />
+          <radialGradient id="lensG" cx="0.38" cy="0.32">
+            <stop offset="0%" stopColor="#5a341a" />
+            <stop offset="45%" stopColor="#1a0d05" />
+            <stop offset="100%" stopColor="#030202" />
+          </radialGradient>
+          <radialGradient id="lensShine" cx="0.32" cy="0.28">
+            <stop offset="0%" stopColor="rgba(255,190,110,0.45)" />
+            <stop offset="55%" stopColor="rgba(255,140,60,0)" />
           </radialGradient>
         </defs>
-        {/* substrate */}
-        <path d={outline} fill="rgba(20,15,10,0.85)" stroke="rgba(255,138,61,0.25)" strokeWidth="1" />
-        {/* lens housing */}
-        <circle cx={W / 2} cy={170} r="62" fill="#0a0a0c" stroke="rgba(255,138,61,0.5)" strokeWidth="1.5" />
-        <circle cx={W / 2} cy={170} r="48" fill="url(#lensG)" />
-        <circle cx={W / 2} cy={170} r="38" fill="none" stroke="rgba(255,138,61,0.4)" strokeWidth="0.5" />
-        <circle cx={W / 2 - 12} cy={158} r="8" fill="rgba(255,180,100,0.3)" />
-        {/* mic array (3 mics) */}
-        {[0, 1, 2].map(i => (
-          <circle key={i} cx={W / 2 - 30 + i * 30} cy={310} r="6" fill="#000" stroke="rgba(255,138,61,0.3)" />
+        {/* PCB substrate (dark, amber-tinted) */}
+        <path d={OUTLINE} fill="rgba(10,10,8,0.92)" stroke="rgba(255,138,61,0.22)" strokeWidth="1" />
+        {/* lanyard pass-through */}
+        <circle cx={LENS_X} cy={LANYARD_Y} r="16" fill="#040404" stroke="rgba(255,138,61,0.10)" strokeWidth="0.8" />
+        {/* camera module — LENS_X/LENS_Y exactly matches shell aperture */}
+        <circle cx={LENS_X} cy={LENS_Y} r="56" fill="#080806" stroke="rgba(255,138,61,0.48)" strokeWidth="1.5" />
+        <circle cx={LENS_X} cy={LENS_Y} r="47" fill="#050504" stroke="rgba(255,138,61,0.22)" strokeWidth="0.8" />
+        <circle cx={LENS_X} cy={LENS_Y} r="38" fill="url(#lensG)" />
+        <circle cx={LENS_X} cy={LENS_Y} r="28" fill="url(#lensShine)" />
+        <circle cx={LENS_X} cy={LENS_Y} r="18" fill="rgba(255,255,255,0.04)" />
+        {/* lens flare specular */}
+        <circle cx={LENS_X - 10} cy={LENS_Y - 13} r="5" fill="rgba(255,200,130,0.22)" />
+        {/* flex routing: lens → mics */}
+        <path d={`M ${LENS_X},${LENS_Y + 52} L ${LENS_X},${MIC_Y - 22}`}
+              stroke="rgba(255,138,61,0.18)" strokeWidth="0.6" fill="none" />
+        {/* LED trace */}
+        <path d={`M ${LED_X + 8},${LED_Y} L ${LENS_X - 54},${LENS_Y}`}
+              stroke="rgba(255,138,61,0.15)" strokeWidth="0.5" fill="none" />
+        {/* MEMS microphones — same X positions as shell mic ports */}
+        {MICS.map((mx, i) => (
+          <React.Fragment key={i}>
+            <circle cx={mx} cy={MIC_Y} r="13" fill="#0a0a08" stroke="rgba(255,138,61,0.35)" strokeWidth="1" />
+            <circle cx={mx} cy={MIC_Y} r="7"  fill="#060605" stroke="rgba(255,138,61,0.18)" strokeWidth="0.6" />
+            <circle cx={mx} cy={MIC_Y} r="3"  fill="rgba(255,138,61,0.28)" />
+          </React.Fragment>
         ))}
-        {/* status LED */}
-        <circle cx={W / 2 - 86} cy={170} r="4" fill="#ff8a3d">
-          <animate attributeName="opacity" values="0.4;1;0.4" dur="2.4s" repeatCount="indefinite" />
+        {/* mic bus trace */}
+        <path d={`M ${MICS[0]},${MIC_Y + 14} L ${MICS[2]},${MIC_Y + 14} L ${LENS_X},${MIC_Y + 48}`}
+              stroke="rgba(255,138,61,0.15)" strokeWidth="0.5" fill="none" />
+        {/* status LED — same position as shell port */}
+        <circle cx={LED_X} cy={LED_Y} r="6"  fill="#120802" stroke="rgba(255,138,61,0.42)" strokeWidth="1" />
+        <circle cx={LED_X} cy={LED_Y} r="3.5" fill="#ff8a3d">
+          <animate attributeName="opacity" values="0.35;1;0.35" dur="2.4s" repeatCount="indefinite" />
         </circle>
-        {/* flex traces */}
-        <path d={`M ${W / 2},232 L ${W / 2},290 M ${W / 2 - 60},170 L 30,170 M ${W / 2 + 60},170 L ${W - 30},170`}
-              stroke="rgba(255,138,61,0.25)" strokeWidth="0.5" fill="none" />
-        {/* ribbon connector to next layer */}
-        <rect x={W / 2 - 40} y={H - 80} width="80" height="36" rx="3" fill="#1a1208" stroke="rgba(255,138,61,0.4)" />
-        {Array.from({ length: 12 }).map((_, i) => (
-          <line key={i} x1={W / 2 - 36 + i * 6.5} y1={H - 76} x2={W / 2 - 36 + i * 6.5} y2={H - 48}
-                stroke="rgba(255,180,100,0.5)" strokeWidth="0.6" />
+        {/* FPC ribbon connector to SoC layer */}
+        <rect x={LENS_X - 38} y={H - 88} width="76" height="30" rx="2.5"
+              fill="#140e04" stroke="rgba(255,138,61,0.40)" strokeWidth="1" />
+        {Array.from({ length: 11 }).map((_, i) => (
+          <line key={i} x1={LENS_X - 32 + i * 6.2} y1={H - 85} x2={LENS_X - 32 + i * 6.2} y2={H - 62}
+                stroke="rgba(255,180,100,0.45)" strokeWidth="0.7" />
         ))}
       </svg>
     );
   }
 
   if (kind === 'soc') {
+    const { LENS_X, LENS_Y, MICS, MIC_Y, LANYARD_Y, CX } = LAYER;
+    const DIE_Y = 415; // SoC die center — well below the camera zone
     return (
-      <svg viewBox={`-20 -20 ${W + 40} ${H + 40}`} className="layer-svg">
-        {/* PCB */}
-        <path d={outline} fill="#0a1108" stroke="rgba(255,138,61,0.35)" strokeWidth="1" />
-        {/* Trace grid */}
-        {Array.from({ length: 20 }).map((_, i) => (
-          <line key={`h${i}`} x1="0" y1={20 + i * 30} x2={W} y2={20 + i * 30} stroke="rgba(120,200,140,0.06)" strokeWidth="0.5" />
+      <svg viewBox={VB} className="layer-svg">
+        {/* PCB — dark forest green */}
+        <path d={OUTLINE} fill="#080e06" stroke="rgba(255,138,61,0.28)" strokeWidth="1" />
+        {/* trace grid */}
+        {Array.from({ length: 18 }).map((_, i) => (
+          <line key={`h${i}`} x1={LAYER.WALL} y1={60 + i * 28} x2={W - LAYER.WALL} y2={60 + i * 28}
+                stroke="rgba(100,180,90,0.045)" strokeWidth="0.5" />
         ))}
-        {Array.from({ length: 11 }).map((_, i) => (
-          <line key={`v${i}`} x1={i * 32} y1="0" x2={i * 32} y2={H} stroke="rgba(120,200,140,0.06)" strokeWidth="0.5" />
+        {Array.from({ length: 9 }).map((_, i) => (
+          <line key={`v${i}`} x1={LAYER.WALL + i * 34} y1={LAYER.WALL} x2={LAYER.WALL + i * 34} y2={H - LAYER.WALL}
+                stroke="rgba(100,180,90,0.045)" strokeWidth="0.5" />
         ))}
-        {/* SoC die — central */}
-        <rect x={W / 2 - 60} y={H / 2 - 60} width="120" height="120" rx="6"
-              fill="#1a1208" stroke="rgba(255,138,61,0.7)" strokeWidth="1.5" />
-        <rect x={W / 2 - 50} y={H / 2 - 50} width="100" height="100" rx="2"
-              fill="#221a0a" stroke="rgba(255,180,100,0.4)" />
-        <text x={W / 2} y={H / 2 - 18} textAnchor="middle" fill="#ff8a3d"
-              style={{ font: '600 11px ui-monospace, Geist Mono, monospace', letterSpacing: '0.15em' }}>5500FP</text>
-        <text x={W / 2} y={H / 2 + 4} textAnchor="middle" fill="rgba(255,180,100,0.6)"
-              style={{ font: '8px ui-monospace, Geist Mono, monospace', letterSpacing: '0.18em' }}>24-TRIT · 20MHZ</text>
-        {/* die grid pattern */}
-        {Array.from({ length: 8 }).map((_, i) => Array.from({ length: 8 }).map((_, j) => (
-          <rect key={`d${i}-${j}`} x={W / 2 - 40 + i * 10} y={H / 2 + 12 + j * 4} width="6" height="2" fill="rgba(255,138,61,0.15)" />
+        {/* lanyard pass-through */}
+        <circle cx={LENS_X} cy={LANYARD_Y} r="16" fill="#040604" stroke="rgba(255,138,61,0.08)" strokeWidth="0.8" />
+        {/* camera optical path — empty zone matching shell/optics */}
+        <circle cx={LENS_X} cy={LENS_Y} r="52" fill="#040604" stroke="rgba(255,138,61,0.12)" strokeWidth="0.8" strokeDasharray="4 3" />
+        {/* mic alignment markers (assembly reference) */}
+        {MICS.map((mx, i) => (
+          <circle key={i} cx={mx} cy={MIC_Y} r="7" fill="#040604" stroke="rgba(255,138,61,0.10)" strokeWidth="0.6" strokeDasharray="2 2" />
+        ))}
+        {/* Wi-Fi / BLE meandered antenna */}
+        <path d={`M ${CX - 52},${LENS_Y + 78} L ${CX - 52},${LENS_Y + 60} L ${CX + 52},${LENS_Y + 60} L ${CX + 52},${LENS_Y + 78} L ${CX - 28},${LENS_Y + 78} L ${CX - 28},${LENS_Y + 68} L ${CX + 28},${LENS_Y + 68} L ${CX + 28},${LENS_Y + 78}`}
+              stroke="rgba(255,180,100,0.38)" strokeWidth="1" fill="none" />
+        <text x={CX} y={LENS_Y + 58} textAnchor="middle" fill="rgba(255,138,61,0.32)"
+              style={{ font: '6px ui-monospace,monospace', letterSpacing: '0.12em' }}>ANT · 2.4 GHz</text>
+        {/* main 5500FP SoC die — centered at DIE_Y */}
+        <rect x={CX - 58} y={DIE_Y - 58} width="116" height="116" rx="6"
+              fill="#181208" stroke="rgba(255,138,61,0.72)" strokeWidth="1.5" />
+        <rect x={CX - 48} y={DIE_Y - 48} width="96" height="96" rx="3"
+              fill="#201608" stroke="rgba(255,180,100,0.32)" strokeWidth="0.8" />
+        {/* die cell array */}
+        {Array.from({ length: 6 }).map((_, r) => Array.from({ length: 6 }).map((_, c) => (
+          <rect key={`${r}-${c}`} x={CX - 36 + c * 12} y={DIE_Y - 36 + r * 12}
+                width="8" height="8" rx="0.5" fill="rgba(255,138,61,0.10)" />
         )))}
-        {/* package pins */}
-        {Array.from({ length: 14 }).map((_, i) => (
+        <text x={CX} y={DIE_Y - 8} textAnchor="middle" fill="#ff8a3d"
+              style={{ font: '700 11px ui-monospace,monospace', letterSpacing: '0.16em' }}>5500FP</text>
+        <text x={CX} y={DIE_Y + 8} textAnchor="middle" fill="rgba(255,180,100,0.52)"
+              style={{ font: '7px ui-monospace,monospace', letterSpacing: '0.14em' }}>24·TRIT  20MHZ</text>
+        {/* BGA solder balls */}
+        {Array.from({ length: 12 }).map((_, i) => (
           <React.Fragment key={i}>
-            <rect x={W / 2 - 56 + i * 8.6} y={H / 2 - 70} width="3" height="8" fill="rgba(255,180,100,0.5)" />
-            <rect x={W / 2 - 56 + i * 8.6} y={H / 2 + 62} width="3" height="8" fill="rgba(255,180,100,0.5)" />
+            <rect x={CX - 52 + i * 8.8} y={DIE_Y - 64} width="3" height="5" rx="0.5" fill="rgba(255,200,100,0.48)" />
+            <rect x={CX - 52 + i * 8.8} y={DIE_Y + 59} width="3" height="5" rx="0.5" fill="rgba(255,200,100,0.48)" />
+            <rect x={CX - 64}            y={DIE_Y - 52 + i * 8.8} width="5" height="3" rx="0.5" fill="rgba(255,200,100,0.48)" />
+            <rect x={CX + 59}            y={DIE_Y - 52 + i * 8.8} width="5" height="3" rx="0.5" fill="rgba(255,200,100,0.48)" />
           </React.Fragment>
         ))}
-        {/* peripheral chips */}
-        <rect x={50} y={120} width="60" height="40" rx="3" fill="#1a1208" stroke="rgba(255,138,61,0.4)" />
-        <text x={80} y={143} textAnchor="middle" fill="rgba(255,180,100,0.6)" style={{ font: '7px ui-monospace, monospace', letterSpacing: '0.15em' }}>ESP32-S3</text>
-        <rect x={W - 110} y={120} width="60" height="40" rx="3" fill="#1a1208" stroke="rgba(255,138,61,0.4)" />
-        <text x={W - 80} y={143} textAnchor="middle" fill="rgba(255,180,100,0.6)" style={{ font: '7px ui-monospace, monospace', letterSpacing: '0.15em' }}>PSRAM</text>
-        <rect x={50} y={H - 160} width="60" height="40" rx="3" fill="#1a1208" stroke="rgba(255,138,61,0.4)" />
-        <text x={80} y={H - 137} textAnchor="middle" fill="rgba(255,180,100,0.6)" style={{ font: '7px ui-monospace, monospace', letterSpacing: '0.15em' }}>eMMC</text>
-        <rect x={W - 110} y={H - 160} width="60" height="40" rx="3" fill="#1a1208" stroke="rgba(255,138,61,0.4)" />
-        <text x={W - 80} y={H - 137} textAnchor="middle" fill="rgba(255,180,100,0.6)" style={{ font: '7px ui-monospace, monospace', letterSpacing: '0.15em' }}>PMIC</text>
-        {/* passives */}
-        {Array.from({ length: 18 }).map((_, i) => (
-          <rect key={i} x={20 + (i % 9) * 32} y={H - 40 - Math.floor(i / 9) * 12} width="8" height="3" fill="rgba(255,138,61,0.5)" />
+        {/* ESP32-S3 bridge MCU — left of main die */}
+        <rect x={28} y={DIE_Y - 40} width="58" height="42" rx="3"
+              fill="#0e1208" stroke="rgba(255,138,61,0.38)" strokeWidth="1" />
+        <text x={57} y={DIE_Y - 16} textAnchor="middle" fill="rgba(255,180,100,0.50)"
+              style={{ font: '6.5px ui-monospace,monospace', letterSpacing: '0.08em' }}>ESP32-S3</text>
+        <text x={57} y={DIE_Y - 4}  textAnchor="middle" fill="rgba(255,180,100,0.30)"
+              style={{ font: '5.5px ui-monospace,monospace', letterSpacing: '0.08em' }}>BLE 5.3</text>
+        {/* routing trace from SoC → ESP32 */}
+        <path d={`M ${CX - 58},${DIE_Y - 20} L 86,${DIE_Y - 20}`}
+              stroke="rgba(255,138,61,0.18)" strokeWidth="0.6" fill="none" />
+        {/* PSRAM — right of main die */}
+        <rect x={W - 86} y={DIE_Y - 42} width="58" height="38" rx="3"
+              fill="#0e1208" stroke="rgba(255,138,61,0.35)" strokeWidth="1" />
+        <text x={W - 57} y={DIE_Y - 20} textAnchor="middle" fill="rgba(255,180,100,0.50)"
+              style={{ font: '6.5px ui-monospace,monospace', letterSpacing: '0.08em' }}>16M PSRAM</text>
+        {/* eMMC — bottom left */}
+        <rect x={28} y={DIE_Y + 28} width="58" height="38" rx="3"
+              fill="#0e1208" stroke="rgba(255,138,61,0.32)" strokeWidth="1" />
+        <text x={57} y={DIE_Y + 50} textAnchor="middle" fill="rgba(255,180,100,0.50)"
+              style={{ font: '6.5px ui-monospace,monospace', letterSpacing: '0.08em' }}>64G eMMC</text>
+        {/* PMIC — bottom right */}
+        <rect x={W - 86} y={DIE_Y + 28} width="58" height="38" rx="3"
+              fill="#0e1208" stroke="rgba(255,138,61,0.32)" strokeWidth="1" />
+        <text x={W - 57} y={DIE_Y + 50} textAnchor="middle" fill="rgba(255,180,100,0.50)"
+              style={{ font: '6.5px ui-monospace,monospace', letterSpacing: '0.08em' }}>PMIC</text>
+        {/* 0402 passive components */}
+        {[
+          [CX - 90, DIE_Y - 18], [CX - 90, DIE_Y],    [CX - 90, DIE_Y + 18],
+          [CX + 72, DIE_Y - 18], [CX + 72, DIE_Y],     [CX + 72, DIE_Y + 18],
+          [CX - 30, DIE_Y + 78], [CX, DIE_Y + 78],     [CX + 30, DIE_Y + 78],
+          [CX - 20, LENS_Y + 92],[CX + 20, LENS_Y + 92],
+        ].map(([x, y], i) => (
+          <rect key={i} x={x} y={y} width="9" height="4" rx="0.5" fill="rgba(255,138,61,0.44)" />
         ))}
       </svg>
     );
   }
 
   if (kind === 'cell') {
+    const { LENS_X, LANYARD_Y, CHARGE_Y, CX, CY } = LAYER;
+    const SEAL = mkOutline(LR - 12, 12);
     return (
-      <svg viewBox={`-20 -20 ${W + 40} ${H + 40}`} className="layer-svg">
+      <svg viewBox={VB} className="layer-svg">
         <defs>
-          <linearGradient id="cellG" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#1a2332" />
-            <stop offset="50%" stopColor="#0e1620" />
-            <stop offset="100%" stopColor="#070b12" />
+          <linearGradient id="cellBG" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#14202e" />
+            <stop offset="55%" stopColor="#0c1520" />
+            <stop offset="100%" stopColor="#060c16" />
+          </linearGradient>
+          <linearGradient id="cellSheen" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%"   stopColor="rgba(120,190,255,0.10)" />
+            <stop offset="50%"  stopColor="rgba(120,190,255,0.02)" />
+            <stop offset="100%" stopColor="rgba(120,190,255,0.10)" />
           </linearGradient>
         </defs>
-        {/* pouch outer */}
-        <path d={outline} fill="url(#cellG)" stroke="rgba(120,180,255,0.25)" strokeWidth="1" />
-        {/* heat seal margin */}
-        <path d={`M ${R - 12},12 L ${W - R + 12},12 A ${R - 12} ${R - 12} 0 0 1 ${W - 12} ${R} L ${W - 12} ${H - R} A ${R - 12} ${R - 12} 0 0 1 ${W - R + 12} ${H - 12} L ${R - 12} ${H - 12} A ${R - 12} ${R - 12} 0 0 1 12 ${H - R} L 12 ${R} A ${R - 12} ${R - 12} 0 0 1 ${R - 12} 12 Z`}
-              fill="none" stroke="rgba(120,180,255,0.18)" strokeWidth="0.5" strokeDasharray="3 2" />
-        {/* lattice — solid-state ceramic-polymer matrix */}
-        {Array.from({ length: 14 }).map((_, i) => (
-          <line key={`hh${i}`} x1="40" y1={50 + i * 36} x2={W - 40} y2={50 + i * 36}
-                stroke="rgba(120,180,255,0.1)" strokeWidth="0.5" />
+        {/* pouch body */}
+        <path d={OUTLINE} fill="url(#cellBG)" stroke="rgba(120,180,255,0.28)" strokeWidth="1.4" />
+        {/* metallic foil sheen */}
+        <path d={OUTLINE} fill="url(#cellSheen)" />
+        {/* heat-seal perimeter */}
+        <path d={SEAL} fill="none" stroke="rgba(120,180,255,0.16)" strokeWidth="0.6" strokeDasharray="5 3" />
+        {/* electrode laminate stack lines */}
+        {Array.from({ length: 18 }).map((_, i) => (
+          <line key={i}
+                x1={36} y1={100 + i * 21} x2={W - 36} y2={100 + i * 21}
+                stroke={i % 3 === 0 ? 'rgba(130,190,255,0.12)' : 'rgba(130,190,255,0.05)'}
+                strokeWidth="0.6" />
         ))}
-        {Array.from({ length: 7 }).map((_, i) => (
-          <line key={`vv${i}`} x1={50 + i * 36} y1="50" x2={50 + i * 36} y2={H - 50}
-                stroke="rgba(120,180,255,0.1)" strokeWidth="0.5" />
+        {/* lanyard pass-through marker */}
+        <circle cx={LENS_X} cy={LANYARD_Y} r="16" fill="#040810" stroke="rgba(120,180,255,0.08)" strokeWidth="0.6" strokeDasharray="3 2" />
+        {/* positive terminal tab */}
+        <rect x={CX - 34} y={-22} width="22" height="28" rx="2"
+              fill="#d0d0d6" stroke="rgba(220,220,220,0.7)" strokeWidth="1" />
+        <text x={CX - 23} y={-5} textAnchor="middle" fill="#1a1a1a"
+              style={{ font: '700 9px ui-monospace,monospace' }}>+</text>
+        {/* negative terminal tab */}
+        <rect x={CX + 12} y={-22} width="22" height="28" rx="2"
+              fill="#555" stroke="rgba(255,255,255,0.32)" strokeWidth="1" />
+        <text x={CX + 23} y={-5} textAnchor="middle" fill="#ddd"
+              style={{ font: '700 9px ui-monospace,monospace' }}>−</text>
+        {/* protection circuit module (PCB strip near tabs) */}
+        <rect x={CX - 54} y={18} width="108" height="20" rx="2"
+              fill="#0a140a" stroke="rgba(100,200,80,0.30)" strokeWidth="0.8" />
+        {Array.from({ length: 6 }).map((_, i) => (
+          <rect key={i} x={CX - 46 + i * 15} y={22} width="10" height="10" rx="1"
+                fill="#152010" stroke="rgba(100,200,80,0.22)" strokeWidth="0.5" />
         ))}
-        {/* tabs */}
-        <rect x={W / 2 - 36} y="-10" width="20" height="22" fill="#cccccc" stroke="rgba(255,255,255,0.5)" />
-        <rect x={W / 2 + 16} y="-10" width="20" height="22" fill="#666" stroke="rgba(255,255,255,0.3)" />
-        <text x={W / 2 - 26} y="6" textAnchor="middle" fill="#000" style={{ font: '700 8px ui-monospace, monospace' }}>+</text>
-        <text x={W / 2 + 26} y="6" textAnchor="middle" fill="#fff" style={{ font: '700 8px ui-monospace, monospace' }}>−</text>
-        {/* label */}
-        <text x={W / 2} y={H / 2} textAnchor="middle" fill="rgba(150,200,255,0.4)"
-              style={{ font: '300 28px Inter Tight, sans-serif', letterSpacing: '-0.02em' }}>500</text>
-        <text x={W / 2} y={H / 2 + 22} textAnchor="middle" fill="rgba(150,200,255,0.4)"
-              style={{ font: '8px ui-monospace, monospace', letterSpacing: '0.3em' }}>mAh · SOLID-STATE</text>
+        {/* capacity label */}
+        <text x={CX} y={CY - 24} textAnchor="middle" fill="rgba(140,200,255,0.38)"
+              style={{ font: '300 34px Inter Tight,sans-serif', letterSpacing: '-0.03em' }}>500</text>
+        <text x={CX} y={CY + 4} textAnchor="middle" fill="rgba(140,200,255,0.28)"
+              style={{ font: '7px ui-monospace,monospace', letterSpacing: '0.36em' }}>mAh</text>
+        <text x={CX} y={CY + 22} textAnchor="middle" fill="rgba(140,200,255,0.22)"
+              style={{ font: '6px ui-monospace,monospace', letterSpacing: '0.22em' }}>SOLID · STATE</text>
+        {/* magnetic charging contact — matches shell ring */}
+        <circle cx={LENS_X} cy={CHARGE_Y} r="34" fill="none"
+                stroke="rgba(120,180,255,0.18)" strokeWidth="0.8" strokeDasharray="4 3" />
+        <circle cx={LENS_X} cy={CHARGE_Y} r="22" fill="#080e18"
+                stroke="rgba(120,180,255,0.14)" strokeWidth="0.8" />
+        <text x={CX} y={CHARGE_Y + 4} textAnchor="middle" fill="rgba(120,180,255,0.28)"
+              style={{ font: '6px ui-monospace,monospace', letterSpacing: '0.12em' }}>MAG</text>
       </svg>
     );
   }
@@ -410,46 +552,50 @@ function DeviceLayer({ kind }) {
 
 function Exploded() {
   const ref = useRef(null);
-  const [step, setStep] = useState(0);
+  const [pct, setPct] = useState(0);
   useEffect(() => {
     const onScroll = () => {
       const el = ref.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
       const total = el.offsetHeight - window.innerHeight;
-      const pct = Math.min(Math.max(-rect.top / total, 0), 1);
-      setStep(Math.min(3, Math.floor(pct * 4)));
+      setPct(Math.min(Math.max(-rect.top / total, 0), 1));
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Discrete step for text panel; continuous pct drives the 3D separation
+  const step = Math.min(3, Math.floor(pct * 4.25));
+  // 0 → 260 px continuous separation that scrolls with the page
+  const sep = pct * 260;
+  // Reveal thresholds — each layer fades in as the scroll reaches it
+  const REVEAL = [0, 0.18, 0.42, 0.66];
+
   const layers = [
-    { name: 'Aluminum shell',  tag: 'CNC · 6061',     render: 'shell' },
-    { name: 'Optics + mics',   tag: 'Sensor stack',   render: 'optics', accent: true },
-    { name: '5500FP SoC',      tag: 'Compute',        render: 'soc',    accent: true },
-    { name: 'Solid-state cell',tag: '500 mAh',        render: 'cell' },
+    { name: 'Aluminum shell',   tag: 'CNC · 6061',   render: 'shell' },
+    { name: 'Optics + mics',    tag: 'Sensor stack', render: 'optics', accent: true },
+    { name: '5500FP SoC',       tag: 'Compute',      render: 'soc',   accent: true },
+    { name: 'Solid-state cell', tag: '500 mAh',      render: 'cell' },
   ];
-  // Vertical separation grows with scroll. At step 0 layers are stacked; at step 3 fully exploded.
-  const sep = 40 + step * 95;   // px between layers (40 → 325)
 
   const steps = [
-    { num: '01', title: 'Outer shell', body: 'Single-billet 6061 aluminum, anodized matte black. Two halves laser-welded along the equatorial seam. 16.6 g, 52 × 31 × 9 mm.' },
-    { num: '02', title: 'Sensor stack', body: '12MP wide-angle sensor with f/2.0 optic, three MEMS mics in stereo beam-forming geometry, hardware status LED hard-wired to recording state.' },
-    { num: '03', title: '5500FP SoC', body: 'Custom 24-trit RISC core at 20 MHz, paired with an ESP32-S3 bridge MCU for BLE 5.3. 16 MB PSRAM, 64 GB eMMC for moments.' },
-    { num: '04', title: 'Solid-state cell', body: '500 mAh ceramic-polymer pouch. No liquid electrolyte. Three-minute full charge via magnetic dock. 10,000-cycle rated lifespan.' },
+    { num: '01', title: 'Outer shell',       body: 'Single-billet 6061 aluminum, anodized matte black. Two halves laser-welded along the equatorial seam. 16.6 g, 52 × 31 × 9 mm.' },
+    { num: '02', title: 'Sensor stack',      body: '12MP wide-angle sensor with f/2.0 optic, three MEMS mics in stereo beam-forming geometry, hardware status LED hard-wired to recording state.' },
+    { num: '03', title: '5500FP SoC',        body: 'Custom 24-trit RISC core at 20 MHz, paired with an ESP32-S3 bridge MCU for BLE 5.3. 16 MB PSRAM, 64 GB eMMC for moments.' },
+    { num: '04', title: 'Solid-state cell',  body: '500 mAh ceramic-polymer pouch. No liquid electrolyte. Three-minute full charge via magnetic dock. 10,000-cycle rated lifespan.' },
   ];
 
   return (
     <section className="exploded-section" id="exploded" ref={ref}>
       <div className="exploded-sticky">
         <div className="wrap" style={{ width: '100%' }}>
-          <div className="rail-label">03 · Inside</div>
           <div className="exploded-grid">
             <div className="left">
-              <div className="t-mono-amber" style={{ marginBottom: 16 }}>SCROLL TO EXPLODE</div>
-              <h2 className="t-h1" style={{ marginBottom: 32 }}>Four<br />layers.<br />One ounce.</h2>
+              <div className="rail-label" style={{ marginBottom: 12 }}>03 · Inside</div>
+              <div className="t-mono-amber" style={{ marginBottom: 8 }}>SCROLL TO EXPLODE</div>
+              <h2 className="exploded-h2">Four layers.<br />One ounce.</h2>
               {steps.map((s, i) => (
                 <div key={i} className={`exp-step ${step === i ? 'active' : ''}`}>
                   <div className="num">{s.num} / 04</div>
@@ -463,22 +609,18 @@ function Exploded() {
               <div className="exploded-scene">
                 {layers.map((l, i) => {
                   const offset = (i - 1.5) * sep;
+                  const revealed = pct >= REVEAL[i];
                   return (
                     <div
                       key={i}
-                      className={`exp-slice ${l.accent ? 'is-accent' : ''} ${step >= i ? 'is-active' : ''}`}
+                      className={`exp-slice ${l.accent ? 'is-accent' : ''}`}
                       style={{
-                        transform: `translate(-50%, -50%) translateY(${offset}px) rotateX(58deg) rotateZ(-14deg)`,
+                        transform: `translate(-50%, -50%) translateY(${offset}px) rotateX(54deg) rotateZ(-20deg)`,
                         zIndex: 10 - i,
+                        opacity: revealed ? 1 : 0.08,
                       }}
                     >
                       <DeviceLayer kind={l.render} />
-                      <div className="exp-slice__tag">
-                        <span className="exp-slice__num">L0{i + 1}</span>
-                        <span className="exp-slice__name">{l.name}</span>
-                        <span className="exp-slice__sub">{l.tag}</span>
-                      </div>
-                      <div className="exp-slice__leader" />
                     </div>
                   );
                 })}
