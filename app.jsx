@@ -3,6 +3,7 @@ function App() {
     <>
       <Nav />
       <Hero />
+      <Trust />
       <Marquee />
       <Manifesto />
       <Architecture />
@@ -13,6 +14,7 @@ function App() {
       <CTA />
       <FAQ />
       <Footer />
+      <StickyMobileCTA />
     </>
   );
 }

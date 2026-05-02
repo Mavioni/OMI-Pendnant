@@ -51,19 +51,19 @@ function Hero() {
           </p>
           <div className="hero__metrics">
             <div className="hero__metric">
-              <div className="hero__metric-num">16.6<span style={{ fontSize: 12, color: 'var(--ink-3)', marginLeft: 2 }}>g</span></div>
+              <div className="hero__metric-num">16.6<small>g</small></div>
               <div className="hero__metric-label">Mass</div>
             </div>
             <div className="hero__metric">
-              <div className="hero__metric-num">5500<span style={{ fontSize: 12, color: 'var(--ink-3)', marginLeft: 2 }}>FP</span></div>
+              <div className="hero__metric-num">5500<small>FP</small></div>
               <div className="hero__metric-label">Core</div>
             </div>
             <div className="hero__metric">
-              <div className="hero__metric-num">7<span style={{ fontSize: 12, color: 'var(--ink-3)', marginLeft: 2 }}>d</span></div>
+              <div className="hero__metric-num">7<small>d</small></div>
               <div className="hero__metric-label">Standby</div>
             </div>
             <div className="hero__metric">
-              <div className="hero__metric-num">3<span style={{ fontSize: 12, color: 'var(--ink-3)', marginLeft: 2 }}>min</span></div>
+              <div className="hero__metric-num">3<small>min</small></div>
               <div className="hero__metric-label">Charge</div>
             </div>
           </div>
@@ -432,7 +432,7 @@ function Exploded() {
     { name: 'Solid-state cell',tag: '500 mAh',        render: 'cell' },
   ];
   // Vertical separation grows with scroll. At step 0 layers are stacked; at step 3 fully exploded.
-  const sep = (step + 1) * 60;   // px between layers
+  const sep = 40 + step * 95;   // px between layers (40 → 325)
 
   const steps = [
     { num: '01', title: 'Outer shell', body: 'Single-billet 6061 aluminum, anodized matte black. Two halves laser-welded along the equatorial seam. 16.6 g, 52 × 31 × 9 mm.' },
@@ -681,12 +681,14 @@ function Specs() {
 /* ============== RESERVE / CTA ============== */
 function CTA() {
   const [email, setEmail] = useState('');
-  const [ok, setOk] = useState(false);
+  const [state, setState] = useState('idle'); // idle | error | ok
   const submit = (e) => {
     e.preventDefault();
-    if (!email.includes('@')) return;
-    setOk(true);
-    setTimeout(() => { setOk(false); setEmail(''); }, 3500);
+    const v = email.trim();
+    const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    if (!ok) { setState('error'); return; }
+    setState('ok');
+    setTimeout(() => { setState('idle'); setEmail(''); }, 4500);
   };
   return (
     <section className="cta" id="reserve">
@@ -695,14 +697,75 @@ function CTA() {
         <div className="t-mono-amber" style={{ marginBottom: 24 }}>GEN 1 · LIMITED TO 5,000 UNITS · Q4 2026</div>
         <h2 className="cta__title">Be on<br />the <em>first batch.</em></h2>
         <p className="cta__sub">$100 fully refundable deposit. We email you when your serial number ships.</p>
-        <form className="cta__form" onSubmit={submit}>
-          <input type="email" placeholder="you@domain.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <form className={`cta__form ${state}`} onSubmit={submit} noValidate>
+          <input
+            type="email"
+            placeholder="you@domain.com"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); if (state !== 'idle') setState('idle'); }}
+            aria-label="Email for reservation"
+          />
           <button type="submit" className="btn btn--amber">Reserve →</button>
         </form>
-        <div className={`cta__success ${ok ? 'show' : ''}`}>YOU'RE ON THE LIST · CONFIRMATION SENT</div>
+        <div className="cta__msg">
+          {state === 'ok' && <span className="cta__success show">✓ YOU'RE ON THE LIST · CONFIRMATION SENT TO {email.toUpperCase()}</span>}
+          {state === 'error' && <span className="cta__error show">⚠ THAT EMAIL DOESN'T LOOK RIGHT — TRY AGAIN</span>}
+        </div>
         <div className="cta__price">FROM <strong>$489</strong> · DEPOSIT <strong>$100</strong> · REFUNDABLE UNTIL SHIP</div>
+        <div className="cta__guarantees">
+          <div className="cta__guar"><span className="cta__guar-icon">⟳</span><span>30-day refund</span></div>
+          <div className="cta__guar"><span className="cta__guar-icon">⌁</span><span>2-year warranty</span></div>
+          <div className="cta__guar"><span className="cta__guar-icon">⇆</span><span>Worldwide shipping</span></div>
+          <div className="cta__guar"><span className="cta__guar-icon">⌬</span><span>Open-source firmware</span></div>
+        </div>
       </div>
     </section>
+  );
+}
+
+/* ============== TRUST / PRESS BAR ============== */
+function Trust() {
+  return (
+    <div className="trust">
+      <div className="wrap">
+        <div className="trust__head">As seen on</div>
+        <div className="trust__row">
+          <span className="trust__logo">WIRED</span>
+          <span className="trust__logo">TechCrunch</span>
+          <span className="trust__logo">The Verge</span>
+          <span className="trust__logo">Hacker News</span>
+          <span className="trust__logo">a16z</span>
+          <span className="trust__logo">MIT Tech Review</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============== STICKY MOBILE CTA ============== */
+function StickyMobileCTA() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const onScroll = () => {
+      // Hide when CTA section or footer is in view
+      const cta = document.getElementById('reserve');
+      const ftr = document.querySelector('.footer');
+      const vh = window.innerHeight;
+      let inCta = false;
+      if (cta) { const r = cta.getBoundingClientRect(); inCta = r.top < vh && r.bottom > 0; }
+      let inFtr = false;
+      if (ftr) { const r = ftr.getBoundingClientRect(); inFtr = r.top < vh && r.bottom > 0; }
+      setShow(window.scrollY > 600 && !inCta && !inFtr);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  return (
+    <a href="#reserve" className={`mobile-cta ${show ? 'show' : ''}`}>
+      <span className="mobile-cta__price">$489 · $100 deposit</span>
+      <span className="mobile-cta__btn">Reserve →</span>
+    </a>
   );
 }
 
@@ -779,4 +842,4 @@ function Footer() {
   );
 }
 
-Object.assign(window, { Nav, Hero, Marquee, Manifesto, Architecture, Exploded, Battery, Compare, Specs, CTA, FAQ, Footer });
+Object.assign(window, { Nav, Hero, Marquee, Manifesto, Architecture, Exploded, Battery, Compare, Specs, CTA, FAQ, Footer, Trust, StickyMobileCTA });
