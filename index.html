@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
   <!-- Force fresh fetch of this HTML on every load so cache-busted asset URLs propagate -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
@@ -12,15 +13,19 @@
   <link rel="canonical" href="https://revenantai.net/" />
   <meta name="theme-color" content="#0a0a0a" />
 
+  <meta property="og:site_name" content="Revenant AI" />
   <meta property="og:title" content="Omi — Your Portable AI" />
   <meta property="og:description" content="Wearable AI pendant. On-device. Solid-state. Reserve Gen 1 from $489." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://revenantai.net/" />
-  <meta property="og:image" content="https://revenantai.net/assets/omi-front.jpg" />
+  <meta property="og:image" content="https://revenantai.net/assets/omi-wide.jpg" />
+  <meta property="og:image:width" content="1920" />
+  <meta property="og:image:height" content="720" />
+  <meta property="og:image:alt" content="Omi pendant" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Omi — Your Portable AI" />
   <meta name="twitter:description" content="Wearable AI pendant. On-device. Solid-state. Reserve Gen 1 from $489." />
-  <meta name="twitter:image" content="https://revenantai.net/assets/omi-front.jpg" />
+  <meta name="twitter:image" content="https://revenantai.net/assets/omi-wide.jpg" />
 
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="apple-touch-icon" href="assets/omi-front.jpg" />
@@ -39,7 +44,11 @@
     "@context": "https://schema.org",
     "@type": "Product",
     "name": "Omi Pendant",
-    "image": "https://revenantai.net/assets/omi-front.jpg",
+    "image": [
+      "https://revenantai.net/assets/omi-front.jpg",
+      "https://revenantai.net/assets/omi-angle.jpg",
+      "https://revenantai.net/assets/omi-detail.jpg"
+    ],
     "description": "Wearable AI pendant. 16.6g. Solid-state battery. 24-trit RISC core. On-device inference.",
     "brand": { "@type": "Brand", "name": "Revenant AI" },
     "offers": {
@@ -55,5 +64,11 @@
 </head>
 <body>
   <div id="root"></div>
+  <noscript>
+    <div style="padding:48px;font:16px/1.6 system-ui,sans-serif;color:#eee;background:#0a0a0a;max-width:640px;margin:0 auto">
+      <h1 style="margin:0 0 12px">Omi — Your Portable AI</h1>
+      <p>This site needs JavaScript. Reservations: <a href="mailto:hello@revenantai.net" style="color:#fbbf24">hello@revenantai.net</a></p>
+    </div>
+  </noscript>
 </body>
 </html>
