@@ -1,0 +1,58 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install linters
+        run: |
+          npm install --no-save --no-package-lock \
+            htmlhint@1 \
+            stylelint@16 \
+            stylelint-config-recommended@14
+
+      - name: Lint HTML
+        run: npx htmlhint "index.html"
+
+      - name: Lint CSS
+        run: npx stylelint "styles.css"
+
+      - name: Validate JSON-LD in index.html
+        run: |
+          node -e "
+            const fs = require('fs');
+            const html = fs.readFileSync('index.html', 'utf8');
+            const m = html.match(/<script type=\"application\/ld\+json\">([\s\S]*?)<\/script>/);
+            if (!m) { console.error('No JSON-LD block found'); process.exit(1); }
+            try { JSON.parse(m[1]); console.log('JSON-LD valid'); }
+            catch (e) { console.error('Invalid JSON-LD:', e.message); process.exit(1); }
+          "
+
+      - name: Check that referenced local assets exist
+        run: |
+          node -e "
+            const fs = require('fs');
+            const html = fs.readFileSync('index.html', 'utf8');
+            const refs = [...html.matchAll(/(?:src|href)=\"([^\"]+)\"/g)]
+              .map(m => m[1])
+              .filter(p => !p.startsWith('http') && !p.startsWith('mailto:') && !p.startsWith('#'))
+              .map(p => p.split('?')[0]);
+            const missing = refs.filter(p => !fs.existsSync(p));
+            if (missing.length) {
+              console.error('Missing local assets:'); missing.forEach(p => console.error('  ' + p));
+              process.exit(1);
+            }
+            console.log('All ' + refs.length + ' local refs exist');
+          "
