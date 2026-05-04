@@ -1357,5 +1357,11 @@ a { color: inherit; text-decoration: none; }
 
 /* ------- REDUCED MOTION ------- */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.001s !important; transition-duration: 0.001s !important; }
+  /* Stop decorative looping animations entirely rather than racing through them */
+  .marquee__track,
+  .trit-board__head .live i,
+  .hero__chip i,
+  .nav__logo i { animation: none !important; }
+  /* Collapse non-looping transitions so UI still feels responsive */
+  *, *::before, *::after { transition-duration: 0.01s !important; }
 }
