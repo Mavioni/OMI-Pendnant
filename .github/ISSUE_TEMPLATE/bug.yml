@@ -1,0 +1,35 @@
+name: Bug report
+description: Something on the site is broken
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What's broken?
+      placeholder: e.g. The exploded view doesn't animate on Firefox.
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: URL / section
+      placeholder: e.g. revenantai.net/#exploded
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & OS
+      placeholder: e.g. Safari 17 on macOS 14
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Scroll to ...
+        3. Notice ...
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot or video
