@@ -3,19 +3,53 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Omi · Your Portable AI</title>
+  <title>Omi — Your Portable AI</title>
   <meta name="description" content="Omi — wearable AI pendant. 16.6g. Solid-state battery. 24-trit RISC core. On-device inference. Reserve Gen 1 from $489." />
-  <meta property="og:title" content="Omi · Your Portable AI" />
+  <link rel="canonical" href="https://revenantai.net/" />
+  <meta name="theme-color" content="#0a0a0a" />
+
+  <meta property="og:title" content="Omi — Your Portable AI" />
   <meta property="og:description" content="Wearable AI pendant. On-device. Solid-state. Reserve Gen 1 from $489." />
   <meta property="og:type" content="website" />
-  <meta name="theme-color" content="#0a0a0a" />
-  <link rel="stylesheet" href="styles.css?v=20260504" />
-  <link rel="preload" as="image" href="assets/omi-front.jpg" />
-  <script src="vendor/react.production.min.js"></script>
-  <script src="vendor/react-dom.production.min.js"></script>
+  <meta property="og:url" content="https://revenantai.net/" />
+  <meta property="og:image" content="https://revenantai.net/assets/omi-front.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Omi — Your Portable AI" />
+  <meta name="twitter:description" content="Wearable AI pendant. On-device. Solid-state. Reserve Gen 1 from $489." />
+  <meta name="twitter:image" content="https://revenantai.net/assets/omi-front.jpg" />
+
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="apple-touch-icon" href="assets/omi-front.jpg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="styles.css?v=20260504a" />
+  <link rel="preload" as="image" href="assets/omi-front.jpg" fetchpriority="high" />
+
+  <script defer src="vendor/react.production.min.js"></script>
+  <script defer src="vendor/react-dom.production.min.js"></script>
+  <script defer src="app.bundle.js?v=20260504a"></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "Omi Pendant",
+    "image": "https://revenantai.net/assets/omi-front.jpg",
+    "description": "Wearable AI pendant. 16.6g. Solid-state battery. 24-trit RISC core. On-device inference.",
+    "brand": { "@type": "Brand", "name": "Revenant AI" },
+    "offers": {
+      "@type": "Offer",
+      "url": "https://revenantai.net/#reserve",
+      "priceCurrency": "USD",
+      "price": "489",
+      "availability": "https://schema.org/PreOrder",
+      "priceValidUntil": "2027-01-01"
+    }
+  }
+  </script>
 </head>
 <body>
   <div id="root"></div>
-  <script src="app.bundle.js?v=20260504"></script>
 </body>
 </html>

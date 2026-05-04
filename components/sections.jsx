@@ -1,21 +1,43 @@
 /* OMI v2 sections — engineer-to-engineer copy, photo-driven hero, exploded scroll */
-const { useState, useEffect, useRef, useMemo } = React;
+const { useState, useEffect, useRef } = React;
+
+// rAF-throttle: coalesce scroll events to one paint frame
+function useRafScroll(handler) {
+  useEffect(() => {
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { handler(); ticking = false; });
+    };
+    handler();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+}
+
+// Run a callback on an interval only while ref'd element is on-screen
+function useVisibleInterval(ref, fn, ms) {
+  useEffect(() => {
+    let id = null;
+    const start = () => { if (id == null) id = setInterval(fn, ms); };
+    const stop = () => { if (id != null) { clearInterval(id); id = null; } };
+    const obs = new IntersectionObserver(([e]) => e.isIntersecting ? start() : stop(), { threshold: 0.1 });
+    if (ref.current) obs.observe(ref.current);
+    return () => { stop(); obs.disconnect(); };
+  }, []);
+}
 
 /* ============== NAV ============== */
 function Nav() {
   const [progress, setProgress] = useState(0);
-  useEffect(() => {
-    const onScroll = () => {
-      const h = document.documentElement;
-      const max = h.scrollHeight - h.clientHeight;
-      setProgress(max > 0 ? (h.scrollTop / max) * 100 : 0);
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  useRafScroll(() => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    setProgress(max > 0 ? (h.scrollTop / max) * 100 : 0);
+  });
   return (
-    <nav className="nav">
+    <nav className="nav" aria-label="Primary">
       <a href="#top" className="nav__logo"><i />OMI</a>
       <div className="nav__links">
         <a href="#manifesto">Why</a>
@@ -144,10 +166,8 @@ function Manifesto() {
 function Architecture() {
   // Animated SoC die — blocks light up in a sequence to suggest data flow
   const [activeBlock, setActiveBlock] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setActiveBlock(b => (b + 1) % 6), 700);
-    return () => clearInterval(id);
-  }, []);
+  const sectionRef = useRef(null);
+  useVisibleInterval(sectionRef, () => setActiveBlock(b => (b + 1) % 6), 700);
 
   const blocks = [
     { top: '12%', left: '12%', width: '30%', height: '18%', label: 'CORE / 5500FP' },
@@ -159,7 +179,7 @@ function Architecture() {
   ];
 
   return (
-    <section className="section section--alt" id="architecture">
+    <section className="section section--alt" id="architecture" ref={sectionRef}>
       <div className="wrap">
         <div className="rail-label">02 · Silicon</div>
         <div className="section-head">
@@ -222,16 +242,14 @@ function Architecture() {
 /* Live ternary stream */
 function TritStream() {
   const [cells, setCells] = useState(() => Array(64).fill(0).map(() => Math.floor(Math.random() * 3) - 1));
-  useEffect(() => {
-    const id = setInterval(() => {
-      setCells(prev => prev.map(v => Math.random() < 0.35 ? Math.floor(Math.random() * 3) - 1 : v));
-    }, 300); // 300ms > 250ms CSS transition so each cell finishes before next update
-    return () => clearInterval(id);
-  }, []);
+  const boardRef = useRef(null);
+  useVisibleInterval(boardRef, () => {
+    setCells(prev => prev.map(v => Math.random() < 0.35 ? Math.floor(Math.random() * 3) - 1 : v));
+  }, 300);
   const labels = { '-1': '−', '0': '0', '1': '+' };
   const cls = { '-1': 'trit--neg', '0': 'trit--zero', '1': 'trit--pos' };
   return (
-    <div className="trit-board" style={{ marginTop: 64 }}>
+    <div className="trit-board" style={{ marginTop: 64 }} ref={boardRef}>
       <div className="trit-board__head">
         <span>5500FP · INFERENCE LOOP</span>
         <span className="live"><i />20 MHZ · LIVE</span>
@@ -554,18 +572,13 @@ function DeviceLayer({ kind }) {
 function Exploded() {
   const ref = useRef(null);
   const [pct, setPct] = useState(0);
-  useEffect(() => {
-    const onScroll = () => {
-      const el = ref.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const total = el.offsetHeight - window.innerHeight;
-      setPct(Math.min(Math.max(-rect.top / total, 0), 1));
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  useRafScroll(() => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const total = el.offsetHeight - window.innerHeight;
+    setPct(Math.min(Math.max(-rect.top / total, 0), 1));
+  });
 
   // Discrete step for text panel; continuous pct drives the 3D separation
   const step = Math.min(3, Math.floor(pct * 4.25));
@@ -882,22 +895,21 @@ function Trust() {
 /* ============== STICKY MOBILE CTA ============== */
 function StickyMobileCTA() {
   const [show, setShow] = useState(false);
-  useEffect(() => {
-    const onScroll = () => {
-      // Hide when CTA section or footer is in view
-      const cta = document.getElementById('reserve');
-      const ftr = document.querySelector('.footer');
-      const vh = window.innerHeight;
-      let inCta = false;
-      if (cta) { const r = cta.getBoundingClientRect(); inCta = r.top < vh && r.bottom > 0; }
-      let inFtr = false;
-      if (ftr) { const r = ftr.getBoundingClientRect(); inFtr = r.top < vh && r.bottom > 0; }
-      setShow(window.scrollY > 600 && !inCta && !inFtr);
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  const elsRef = useRef(null);
+  useRafScroll(() => {
+    if (!elsRef.current) {
+      elsRef.current = {
+        cta: document.getElementById('reserve'),
+        ftr: document.querySelector('.footer'),
+      };
+    }
+    const { cta, ftr } = elsRef.current;
+    const vh = window.innerHeight;
+    let inCta = false, inFtr = false;
+    if (cta) { const r = cta.getBoundingClientRect(); inCta = r.top < vh && r.bottom > 0; }
+    if (ftr) { const r = ftr.getBoundingClientRect(); inFtr = r.top < vh && r.bottom > 0; }
+    setShow(window.scrollY > 600 && !inCta && !inFtr);
+  });
   return (
     <a href="#reserve" className={`mobile-cta ${show ? 'show' : ''}`}>
       <span className="mobile-cta__price">$489 · $100 deposit</span>
@@ -925,12 +937,24 @@ function FAQ() {
           <h2 className="t-h1">Questions.</h2>
         </div>
         <div className="faq">
-          {items.map((it, i) => (
-            <div key={i} className={`faq__item ${open === i ? 'open' : ''}`} onClick={() => setOpen(open === i ? -1 : i)}>
-              <div className="faq__q"><span>{it.q}</span><span className="faq__plus">+</span></div>
-              <div className="faq__a">{it.a}</div>
-            </div>
-          ))}
+          {items.map((it, i) => {
+            const isOpen = open === i;
+            return (
+              <div key={i} className={`faq__item ${isOpen ? 'open' : ''}`}>
+                <button
+                  type="button"
+                  className="faq__q"
+                  aria-expanded={isOpen}
+                  aria-controls={`faq-a-${i}`}
+                  onClick={() => setOpen(isOpen ? -1 : i)}
+                >
+                  <span>{it.q}</span>
+                  <span className="faq__plus" aria-hidden="true">+</span>
+                </button>
+                <div id={`faq-a-${i}`} className="faq__a" role="region"><div>{it.a}</div></div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
