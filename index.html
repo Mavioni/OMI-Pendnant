@@ -3,6 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Force fresh fetch of this HTML on every load so cache-busted asset URLs propagate -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Omi — Your Portable AI</title>
   <meta name="description" content="Omi — wearable AI pendant. 16.6g. Solid-state battery. 24-trit RISC core. On-device inference. Reserve Gen 1 from $489." />
   <link rel="canonical" href="https://revenantai.net/" />
@@ -23,12 +27,12 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=20260504a" />
+  <link rel="stylesheet" href="styles.css?v=20260504b" />
   <link rel="preload" as="image" href="assets/omi-front.jpg" fetchpriority="high" />
 
   <script defer src="vendor/react.production.min.js"></script>
   <script defer src="vendor/react-dom.production.min.js"></script>
-  <script defer src="app.bundle.js?v=20260504a"></script>
+  <script defer src="app.bundle.js?v=20260504b"></script>
 
   <script type="application/ld+json">
   {
