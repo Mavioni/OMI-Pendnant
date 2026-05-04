@@ -408,8 +408,7 @@ function DeviceLayer({ kind }) {
               stroke="rgba(255,138,61,0.15)" strokeWidth="0.5" fill="none" />
         {/* status LED — same position as shell port */}
         <circle cx={LED_X} cy={LED_Y} r="6"  fill="#120802" stroke="rgba(255,138,61,0.42)" strokeWidth="1" />
-        <circle cx={LED_X} cy={LED_Y} r="3.5" fill="#ff8a3d">
-          <animate attributeName="opacity" values="0.35;1;0.35" dur="2.4s" repeatCount="indefinite" />
+        <circle cx={LED_X} cy={LED_Y} r="3.5" fill="#ff8a3d" className="led-pulse">
         </circle>
         {/* FPC ribbon connector to SoC layer */}
         <rect x={LENS_X - 38} y={H - 88} width="76" height="30" rx="2.5"
@@ -850,7 +849,8 @@ function CTA() {
     const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
     if (!ok) { setState('error'); return; }
     setState('ok');
-    setTimeout(() => { setState('idle'); setEmail(''); }, 4500);
+    const tid = setTimeout(() => { setState('idle'); setEmail(''); }, 4500);
+    return () => clearTimeout(tid);
   };
   return (
     <section className="cta" id="reserve">
@@ -869,7 +869,7 @@ function CTA() {
           />
           <button type="submit" className="btn btn--amber">Reserve →</button>
         </form>
-        <div className="cta__msg">
+        <div className="cta__msg" role="status" aria-live="polite" aria-atomic="true">
           {state === 'ok' && <span className="cta__success show">✓ YOU'RE ON THE LIST · CONFIRMATION SENT TO {email.toUpperCase()}</span>}
           {state === 'error' && <span className="cta__error show">⚠ THAT EMAIL DOESN'T LOOK RIGHT — TRY AGAIN</span>}
         </div>
@@ -932,7 +932,7 @@ function StickyMobileCTA() {
 
 /* ============== FAQ ============== */
 function FAQ() {
-  const [open, setOpen] = useState(0);
+  const [open, setOpen] = useState(-1);
   const items = [
     { q: 'When does Gen 1 ship?', a: 'Production begins Q4 2026. Reservations are filled in deposit order; your $100 is fully refundable until your serial number ships.' },
     { q: 'Is everything recorded all the time?', a: 'No. Recording requires either a wake gesture or a button press. The amber LED is hard-wired to the mic and camera supply rails — when it\'s dark, those subsystems are powered down.' },
