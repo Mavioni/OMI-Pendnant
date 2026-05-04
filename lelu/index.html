@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Massimo · Diary</title>
+<link rel="stylesheet" href="colors_and_type.css" />
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="../tweaks-panel.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="icons.jsx"></script>
+<script type="text/babel" src="shell.jsx"></script>
+<script type="text/babel" src="composer.jsx"></script>
+<script type="text/babel" src="timeline.jsx"></script>
+<script type="text/babel" src="views.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "dark",
+  "layout": "chat",
+  "verbose": "calm",
+  "sidebar": true,
+  "density": "cozy"
+}/*EDITMODE-END*/;
+
+function App() {
+  const tw = useTweaks(TWEAK_DEFAULTS);
+  const [tweaks, setTweak] = [tw[0], tw[1]];
+  const dark = tweaks.theme === 'dark';
+
+  const [view, setView] = useState('today');
+  const [openEntry, setOpenEntry] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.documentElement.classList.toggle('dark', dark);
+  }, [dark]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 't') setView('today');
+      else if (e.key === 'l') setView('timeline');
+      else if (e.key === 'i') setView('insights');
+      else if (e.key === 'r') setView('recap');
+      else if (e.key === ',') setView('settings');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  if (showOnboarding) {
+    return (
+      <div data-screen-label="00 Onboarding" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-1)' }}>
+        <Onboarding onDone={() => setShowOnboarding(false)} />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ height: '100vh', display: 'flex', background: 'var(--bg-1)' }}>
+      <Sidebar view={view} setView={setView} dark={dark}
+        onCompose={() => setView('today')} />
+
+      <main data-screen-label={`0${['today','timeline','insights','recap','settings'].indexOf(view)+1} ${view}`}
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <TopBar
+          view={view} dark={dark}
+          setDark={() => setTweak('theme', dark ? 'light' : 'dark')}
+          sidebarOpen={tweaks.sidebar}
+          setSidebarOpen={(fn) => setTweak('sidebar', typeof fn === 'function' ? fn(tweaks.sidebar) : fn)}
+          density={tweaks.density}
+        />
+
+        {view === 'today'    && <TodayView density={tweaks.density} layout={tweaks.layout} sidebarOpen={tweaks.sidebar} verbose={tweaks.verbose} dark={dark} />}
+        {view === 'timeline' && <TimelineView entries={SEED_ENTRIES} onOpen={setOpenEntry} density={tweaks.density} />}
+        {view === 'insights' && <InsightsView entries={SEED_ENTRIES} />}
+        {view === 'recap'    && <RecapView entries={SEED_ENTRIES} />}
+        {view === 'settings' && <SettingsView />}
+      </main>
+
+      {openEntry && <EntryDetail entry={openEntry} onClose={() => setOpenEntry(null)} />}
+
+      <TweaksPanel title="Diary tweaks" defaultOpen={false}>
+        <TweakSection label="Theme">
+          <TweakRadio
+            value={tweaks.theme}
+            onChange={(v) => setTweak('theme', v)}
+            options={[{ label: 'Light', value: 'light' }, { label: 'Dark', value: 'dark' }]} />
+        </TweakSection>
+
+        <TweakSection label="Composer layout">
+          <TweakSelect
+            value={tweaks.layout}
+            onChange={(v) => setTweak('layout', v)}
+            options={[
+              { label: 'Classic — serif page', value: 'classic' },
+              { label: 'Compact — sans, tight', value: 'compact' },
+              { label: 'Voice-first', value: 'voice' },
+              { label: 'Chat — guided', value: 'chat' },
+            ]} />
+        </TweakSection>
+
+        <TweakSection label="AI verbosity">
+          <TweakRadio
+            value={tweaks.verbose}
+            onChange={(v) => setTweak('verbose', v)}
+            options={[
+              { label: 'Terse', value: 'terse' },
+              { label: 'Calm', value: 'calm' },
+              { label: 'Chatty', value: 'chatty' },
+            ]} />
+        </TweakSection>
+
+        <TweakSection label="AI sidebar">
+          <TweakToggle
+            value={tweaks.sidebar}
+            onChange={(v) => setTweak('sidebar', v)}
+            label={tweaks.sidebar ? 'Visible — annotates as you write' : 'Hidden'} />
+        </TweakSection>
+
+        <TweakSection label="Density">
+          <TweakRadio
+            value={tweaks.density}
+            onChange={(v) => setTweak('density', v)}
+            options={[{ label: 'Cozy', value: 'cozy' }, { label: 'Spacious', value: 'spacious' }]} />
+        </TweakSection>
+
+        <TweakSection label="Demo">
+          <TweakButton onClick={() => setShowOnboarding(true)}>Replay onboarding</TweakButton>
+        </TweakSection>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
