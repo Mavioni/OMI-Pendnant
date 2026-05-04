@@ -453,8 +453,7 @@ a { color: inherit; text-decoration: none; }
 .marquee__track {
   display: flex;
   gap: 60px;
-  width: max-content;
-  animation: marquee 240s linear infinite;
+  animation: marquee 80s linear infinite; /* JS overrides duration at runtime via scrollWidth measurement */
   white-space: nowrap;
   font-family: var(--display);
   font-size: 36px;
@@ -468,7 +467,7 @@ a { color: inherit; text-decoration: none; }
 .marquee__track .dot { color: var(--amber); margin: 0 4px; }
 @keyframes marquee {
   from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  to   { transform: translateX(var(--marquee-end, -2148px)); }
 }
 
 /* ------- MANIFESTO ------- */

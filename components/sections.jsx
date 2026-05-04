@@ -115,12 +115,24 @@ function Hero() {
 
 /* ============== MARQUEE ============== */
 function Marquee() {
+  const trackRef = useRef(null);
   const items = ["SEE", "·", "UNDERSTAND", "·", "EMPOWER", "·", "5500FP", "·", "24-TRIT RISC", "·", "SOLID-STATE", "·", "16.6 GRAMS"];
-  // Two copies: CSS translateX(-50%) moves exactly one full copy → seamless loop
   const repeated = [...items, ...items];
+
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    // scrollWidth = total width of both copies. Half = one copy = exact loop distance.
+    const copyPx = el.scrollWidth / 2;
+    // 60 px/s — comfortable reading pace, visibly moving but not frantic
+    const duration = (copyPx / 60).toFixed(2);
+    el.style.setProperty('--marquee-end', `-${copyPx}px`);
+    el.style.animationDuration = `${duration}s`;
+  }, []);
+
   return (
     <div className="marquee">
-      <div className="marquee__track">
+      <div className="marquee__track" ref={trackRef}>
         {repeated.map((t, i) => (
           <span key={i} className={t === "·" ? "amber" : (i % 12 === 0 ? "" : "")}>
             {t === "·" ? <span style={{ color: 'var(--amber)' }}>●</span> : <i>{t}</i>}
